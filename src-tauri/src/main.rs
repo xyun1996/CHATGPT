@@ -7,7 +7,7 @@ mod app;
 mod conf;
 mod utils;
 
-use app::{cmd, fs_extra, gpt, menu, setup, window};
+use app::{cmd, fs_extra, gpt, hotkey, menu, setup, window};
 use conf::AppConf;
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_log::{

@@ -1,10 +1,12 @@
-use crate::{app::window, conf::AppConf, utils};
-use clipboard::{ClipboardContext, ClipboardProvider};
+use crate::{
+  app::{
+    hotkey::{self, MyHotkey},
+    window,
+  },
+  conf::AppConf,
+  utils,
+};
 use log::{error, info};
-use rdev::{listen, EventType, Key, KeyboardState};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
-use std::time::Instant;
 use tauri::{utils::config::WindowUrl, App, GlobalShortcutManager, Manager, WindowBuilder};
 use wry::application::accelerator::Accelerator;
 
@@ -19,7 +21,6 @@ pub fn init(app: &mut App) -> std::result::Result<(), Box<dyn std::error::Error>
     info!("stepup_tray");
     window::tray_window(&handle);
   });
-
   if let Some(v) = app_conf.clone().global_shortcut {
     info!("global_shortcut: `{}`", v);
     match v.parse::<Accelerator>() {
@@ -49,8 +50,6 @@ pub fn init(app: &mut App) -> std::result::Result<(), Box<dyn std::error::Error>
   } else {
     info!("global_shortcut_unregister");
   };
-  //register_shortcut(app);
-  // reg_hotkey(app);
   let app_conf2 = app_conf.clone();
   if app_conf.hide_dock_icon {
     #[cfg(target_os = "macos")]
@@ -100,160 +99,6 @@ pub fn init(app: &mut App) -> std::result::Result<(), Box<dyn std::error::Error>
       main_win.build().unwrap();
     });
   }
-
-  fn register_shortcut(app: &mut App) {
-    let ctrl_c_pressed = Arc::new(AtomicBool::new(false));
-    let last_press_time = Arc::new(Mutex::new(Instant::now()));
-    let ctrl_c_pressed_clone = ctrl_c_pressed.clone();
-    let last_press_time_clone = last_press_time.clone();
-
-    let mut shortcut = app.global_shortcut_manager();
-    let handle = app.app_handle();
-    shortcut
-      .register("Ctrl+C", move || {
-        if ctrl_c_pressed_clone.load(Ordering::SeqCst) {
-          let mut last_ctrl_c_time_locked = last_press_time_clone.lock().unwrap();
-          let elapsed = last_ctrl_c_time_locked.elapsed();
-          if elapsed.as_secs() < 1 {
-            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-            let mut content = ctx.get_contents().unwrap();
-            if !content.is_empty() && content.trim() != "" {
-              if let Some(w) = handle.get_window("core") {
-                content = content.replace("'", "\\'");
-                let script = format!(
-                  "
-                  t = document.querySelector(\"textarea\");
-                  t.value='{}';
-                size=document.getElementsByClassName('btn').length;
-                if(size===0||size===5) {{
-                  t.nextSibling.disabled=false;
-                  t.nextSibling.click();
-                }}",
-                  content
-                );
-                info!("script {}", script);
-                w.eval(&script).unwrap();
-              } else {
-                error!("窗口获取失败");
-              }
-            }
-          } else {
-            *last_ctrl_c_time_locked = Instant::now();
-          }
-        } else {
-          ctrl_c_pressed_clone.store(true, Ordering::SeqCst);
-          let mut last_press_time_locked = last_press_time_clone.lock().unwrap();
-          *last_press_time_locked = Instant::now();
-        }
-      })
-      .unwrap_or_else(|err| error!("ctrl+c注册失败:{}", err));
-  }
-
-  fn reg_hotkey(app: &mut App) {
-    let mut listener = hotkey::Listener::new();
-    let ctrl_c_pressed = Arc::new(AtomicBool::new(false));
-    let last_press_time = Arc::new(Mutex::new(Instant::now()));
-    let ctrl_c_pressed_clone = ctrl_c_pressed.clone();
-    let last_press_time_clone = last_press_time.clone();
-    let handle = app.app_handle();
-    listener
-      .register_hotkey(hotkey::modifiers::CONTROL, 'C' as u32, move || {
-        if ctrl_c_pressed_clone.load(Ordering::SeqCst) {
-          let mut last_ctrl_c_time_locked = last_press_time_clone.lock().unwrap();
-          let elapsed = last_ctrl_c_time_locked.elapsed();
-          if elapsed.as_secs() < 1 {
-            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-            let mut content = ctx.get_contents().unwrap();
-            if !content.is_empty() && content.trim() != "" {
-              if let Some(w) = handle.get_window("core") {
-                content = content.replace("'", "\\'");
-                let script = format!(
-                  "
-                  t = document.querySelector(\"textarea\");
-                  t.value='{}';
-                size=document.getElementsByClassName('btn').length;
-                if(size===0||size===5) {{
-                  t.nextSibling.disabled=false;
-                  t.nextSibling.click();
-                }}",
-                  content
-                );
-                info!("script {}", script);
-                w.eval(&script).unwrap();
-              } else {
-                error!("窗口获取失败");
-              }
-            }
-          } else {
-            *last_ctrl_c_time_locked = Instant::now();
-          }
-        } else {
-          ctrl_c_pressed_clone.store(true, Ordering::SeqCst);
-          let mut last_press_time_locked = last_press_time_clone.lock().unwrap();
-          *last_press_time_locked = Instant::now();
-        }
-      })
-      .unwrap();
-    listener.listen();
-  }
-
-  // fn reg_hotkey2(app: &mut App) {
-  //   let mut keyboard = KeyboardState::new();
-  //   let mut listener = hotkey::Listener::new();
-  //   let ctrl_c_pressed = Arc::new(AtomicBool::new(false));
-  //   let last_press_time = Arc::new(Mutex::new(Instant::now()));
-  //   let ctrl_c_pressed_clone = ctrl_c_pressed.clone();
-  //   let last_press_time_clone = last_press_time.clone();
-  //   let handle = app.app_handle();
-  //   // 监听键盘事件
-  //   listen(move |event| {
-  //     if let EventType::KeyPress(key_event) = event.event_type {
-  //       // 更新键盘状态
-  //       KeyboardState::add(&key_event);
-  //       // 检查是否按下了Ctrl+C
-  //       if keyboard.matches_sequence(&[Key::ControlLeft, Key::KeyC]) {
-  //         if ctrl_c_pressed_clone.load(Ordering::SeqCst) {
-  //           let mut last_ctrl_c_time_locked = last_press_time_clone.lock().unwrap();
-  //           let elapsed = last_ctrl_c_time_locked.elapsed();
-  //           if elapsed.as_secs() < 1 {
-  //             let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-  //             let mut content = ctx.get_contents().unwrap();
-  //             if !content.is_empty() && content.trim() != "" {
-  //               if let Some(w) = handle.get_window("core") {
-  //                 content = content.replace("'", "\\'");
-  //                 let script = format!(
-  //                   "
-  //                       t = document.querySelector(\"textarea\");
-  //                       t.value='{}';
-  //                     size=document.getElementsByClassName('btn').length;
-  //                     if(size===0||size===5) {{
-  //                       t.nextSibling.disabled=false;
-  //                       t.nextSibling.click();
-  //                     }}",
-  //                   content
-  //                 );
-  //                 info!("script {}", script);
-  //                 w.eval(&script).unwrap();
-  //               } else {
-  //                 error!("窗口获取失败");
-  //               }
-  //             }
-  //           } else {
-  //             *last_ctrl_c_time_locked = Instant::now();
-  //           }
-  //         } else {
-  //           ctrl_c_pressed_clone.store(true, Ordering::SeqCst);
-  //           let mut last_press_time_locked = last_press_time_clone.lock().unwrap();
-  //           *last_press_time_locked = Instant::now();
-  //         }
-  //       }
-  //     } else if let EventType::KeyRelease(key_event) = event.event_type {
-  //       // 更新键盘状态
-  //       keyboard.remove_key(&key_event);
-  //     }
-  //   })
-  //   .unwrap();
-  // }
   // auto_update
   let auto_update = app_conf.get_auto_update();
   if auto_update != "disable" {
@@ -261,6 +106,10 @@ pub fn init(app: &mut App) -> std::result::Result<(), Box<dyn std::error::Error>
     let app = app.handle();
     utils::run_check_update(app, auto_update == "silent", None);
   }
-
+  unsafe {
+    let mh = hotkey::PRESS.hot_key.lock().unwrap();
+    let hc = (*mh).clone();
+    hc.reg_hotkey(app);
+  }
   Ok(())
 }
