@@ -112,7 +112,8 @@ export default function ChatLayout() {
             </Footer>
           </Layout>
         </Layout>
-      )}
-    </ConfigProvider>
+      )
+      }
+    </ConfigProvider >
   );
 }

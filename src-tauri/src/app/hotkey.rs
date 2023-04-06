@@ -29,7 +29,7 @@ pub struct PressInfo {
   // last_press_time_clone: Arc<Mutex<Instant>>,
 }
 
-static mut WD: Mutex<Option<App>> = Mutex::new(None);
+static mut WD: Mutex<Option<AppHandle>> = Mutex::new(None);
 
 fn handle_copy() {
   unsafe {
@@ -55,7 +55,6 @@ fn handle_copy() {
               }}",
             content
           );
-          info!("script {}", script);
           w.unwrap().eval(&script).unwrap();
         }
       } else {
@@ -79,10 +78,8 @@ unsafe extern "system" fn keyboard_hook_callback(
     let kbhook = *kbhook;
 
     if kbhook.vkCode as i32 == 'C' as i32 && GetAsyncKeyState(VK_CONTROL) < 0 {
-      // 处理 Ctrl+C 快捷键事件
       handle_copy();
-      println!("Ctrl+C is pressed");
-      return 0; // 阻止该键盘消息被传递到下一个钩子
+      return 0;
     }
   }
   CallNextHookEx(null_mut(), n_code, w_param, l_param)
@@ -94,11 +91,9 @@ impl MyHotkey {
       h_hook: Arc::new(Mutex::new(null_mut())),
     }
   }
-
-  pub fn reg_hotkey(mut self, app: &mut App) {
-    info!("注册");
+  pub fn reg_hotkey(mut self, handle: AppHandle) {
     unsafe {
-      WD = Mutex::new(Some(*app));
+      WD = Mutex::new(Some(handle));
       let h_mod = GetModuleHandleW(null_mut());
       self.h_hook = Arc::new(Mutex::new(SetWindowsHookExW(
         WH_KEYBOARD_LL,
@@ -108,55 +103,11 @@ impl MyHotkey {
       )));
     }
   }
-
   pub fn unreg_hotkey(&self) {
     let h = self.h_hook.lock().unwrap();
     unsafe {
       UnhookWindowsHookEx(h.as_mut().unwrap());
     };
-  }
-
-  fn register_shortcut(app: &mut App) {
-    let ctrl_c_pressed = Arc::new(AtomicBool::new(false));
-    let last_press_time = Arc::new(Mutex::new(Instant::now()));
-    let ctrl_c_pressed_clone = ctrl_c_pressed.clone();
-    let last_press_time_clone = last_press_time.clone();
-
-    let handle = app.app_handle();
-    if ctrl_c_pressed_clone.load(Ordering::SeqCst) {
-      let mut last_ctrl_c_time_locked = last_press_time_clone.lock().unwrap();
-      let elapsed = last_ctrl_c_time_locked.elapsed();
-      if elapsed.as_secs() < 1 {
-        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-        let mut content = ctx.get_contents().unwrap();
-        if !content.is_empty() && content.trim() != "" {
-          if let Some(w) = handle.get_window("core") {
-            content = content.replace("'", "\\'");
-            let script = format!(
-              "
-                  t = document.querySelector(\"textarea\");
-                  t.value='{}';
-                size=document.getElementsByClassName('btn').length;
-                if(size===0||size===5) {{
-                  t.nextSibling.disabled=false;
-                  t.nextSibling.click();
-                }}",
-              content
-            );
-            info!("script {}", script);
-            w.eval(&script).unwrap();
-          } else {
-            error!("窗口获取失败");
-          }
-        }
-      } else {
-        *last_ctrl_c_time_locked = Instant::now();
-      }
-    } else {
-      ctrl_c_pressed_clone.store(true, Ordering::SeqCst);
-      let mut last_press_time_locked = last_press_time_clone.lock().unwrap();
-      *last_press_time_locked = Instant::now();
-    }
   }
 }
 

@@ -109,6 +109,11 @@ async fn main() {
                   .amend(serde_json::json!({ "isinit" : false, "main_close": is_ok }))
                   .write();
                 if is_ok {
+                  unsafe {
+                    let mh = hotkey::PRESS.hot_key.lock().unwrap();
+                    let hk = (*mh).clone();
+                    hk.unreg_hotkey();
+                  }
                   std::process::exit(0);
                 } else {
                   win.minimize().unwrap();
@@ -116,6 +121,11 @@ async fn main() {
               },
             );
           } else if app_conf.main_close {
+            unsafe {
+              let mh = hotkey::PRESS.hot_key.lock().unwrap();
+              let hk = (*mh).clone();
+              hk.unreg_hotkey();
+            }
             std::process::exit(0);
           } else {
             win.minimize().unwrap();

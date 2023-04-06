@@ -106,10 +106,12 @@ pub fn init(app: &mut App) -> std::result::Result<(), Box<dyn std::error::Error>
     let app = app.handle();
     utils::run_check_update(app, auto_update == "silent", None);
   }
+
   unsafe {
     let mh = hotkey::PRESS.hot_key.lock().unwrap();
     let hc = (*mh).clone();
-    hc.reg_hotkey(app);
+    let a = app.app_handle().clone();
+    hc.reg_hotkey(a);
   }
   Ok(())
 }
