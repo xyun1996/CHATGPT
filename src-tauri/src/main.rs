@@ -68,6 +68,7 @@ async fn main() {
       gpt::cmd_list,
       gpt::download_list,
       gpt::get_download_list,
+      cmd::copy_search,
       fs_extra::metadata,
       conf::cmd::get_app_conf,
       conf::cmd::reset_app_conf,

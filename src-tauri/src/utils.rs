@@ -130,7 +130,7 @@ pub fn merge(v: &Value, fields: &HashMap<String, Value>) -> Value {
 }
 
 pub fn gen_cmd(name: String) -> String {
-  let re = Regex::new(r"[^a-zA-Z0-9]").unwrap();
+  let re = Regex::new(r"[^\u4e00-\u9fa5\d\w]").unwrap();
   re.replace_all(&name, "_").to_lowercase()
 }
 

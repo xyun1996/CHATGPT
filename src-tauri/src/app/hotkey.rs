@@ -1,11 +1,10 @@
 use clipboard::{ClipboardContext, ClipboardProvider};
-use log::{error, info};
 use once_cell::sync::Lazy;
 use std::ptr::null_mut;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use tauri::{App, AppHandle, EventLoopMessage, Manager, Window, Wry};
+use tauri::{AppHandle, Manager};
 use winapi::shared::minwindef::{LPARAM, LRESULT, WPARAM};
 use winapi::shared::windef::HHOOK;
 use winapi::um::libloaderapi::GetModuleHandleW;

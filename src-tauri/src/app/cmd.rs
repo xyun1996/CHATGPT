@@ -60,6 +60,23 @@ pub fn open_file(path: PathBuf) {
 }
 
 #[command]
+pub fn copy_search(app: AppHandle, content: String) {
+  let script = format!(
+    "
+        t = document.querySelector(\"textarea\");
+        t.value='{}';
+      size=document.getElementsByClassName('btn').length;
+      if(size===0||size===5) {{
+        t.nextSibling.disabled=false;
+        t.nextSibling.click();
+      }}",
+    content
+  );
+  let w = app.app_handle().get_window("core");
+  w.unwrap().eval(&script).unwrap();
+}
+
+#[command]
 pub async fn get_data(app: AppHandle, url: String, is_msg: Option<bool>) -> Option<String> {
   let is_msg = is_msg.unwrap_or(false);
   let res = if is_msg {

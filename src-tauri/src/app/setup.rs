@@ -1,6 +1,6 @@
 use crate::{
   app::{
-    hotkey::{self, MyHotkey},
+    hotkey::{self},
     window,
   },
   conf::AppConf,

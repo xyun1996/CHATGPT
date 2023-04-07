@@ -100,7 +100,7 @@ function init() {
   }
   `;
   document.head.append(styleDom);
-
+  addHotKey();
   if (window.formInterval) {
     clearInterval(window.formInterval);
   }
@@ -136,6 +136,31 @@ function init() {
       subtree: true,
     });
   }, 300);
+}
+
+let ctrlCCnt = 0;
+let lastCtrlCTm = 0;
+const doubleCtrlCTimeout = 500;
+
+async function addHotKey() {
+  document.addEventListener('keydown', async function (e) {
+    if (e.ctrlKey && e.code === 'KeyC') {
+      const now = new Date().getTime();
+      if (now - lastCtrlCTm <= doubleCtrlCTimeout) {
+        ctrlCCnt++;
+        if (ctrlCCnt === 2) {
+          if (navigator.clipboard) {
+            const content = await navigator.clipboard.readText();
+            invoke('copy_search', { content: content });
+          }
+          ctrlCCnt = 0;
+        }
+      } else {
+        ctrlCCnt = 1;
+      }
+      lastCtrlCTm = now;
+    }
+  }, true);
 }
 
 async function cmdTip() {
